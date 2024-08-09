@@ -1,0 +1,137 @@
+1. Para criar ambiente virtual: pythom -m venv venv
+
+2.Ativa o ambiente virtual.
+
+3. Pode ver a versao do Django usando: django-admin --version
+
+4. Cria o coração do Django(App)- python manage.py startproject app . ( o . é para ele entender o diretório raiz)
+
+5. Depois de criar o coração do Django, pode criar o app do projeto que quer..esse é cars. entao.. python manage.py startapp cars
+
+6. Após isso ele cria o app cars
+
+7. Comando: makemigration: python manage.py makemigrations (Esse comando varre o projeto inteiro app por app, camada por camada, modelo por modelo e vai montar os migrations (arquivos de código python que tem escrito neles com comando para o banco de dados--exemplo:create table))
+
+7.1Comando: Migrate.py(gerencia o projeto django): python manage.py migrate (Ele é o comando que executa as migrations. O django vai varrer todas as pastas de migrations que existe dentro das apps e vai pegar os scripts de bancos de dados e executar no BD criando toda estrutura no BD).
+obs: sempre que alterar nos Models (na tabela de BD), pra passar a alteração que foi feita no código no BD é necessário rodar primeiro o makemigration (para criar os scripts de BD) e depois o comando Migrate para pegar esses scripts de BD que foi gerado pelo django e criar no BD tudo que precisa.
+
+8.Criando o super_usuário: python manage.py createsuperuser ( é um usuário especial com permissões administrativas totais sobre todo o site ou aplicativo. O superusuário tem acesso a todas as funcionalidades administrativas do Django, incluindo a capacidade de criar, modificar e excluir qualquer objeto no banco de dados, bem como gerenciar outros usuários, grupos e permissões.)
+9. Para rodar o runserver do django: python manage.py runserver
+
+-------------------------------------------
+Section Admministrador(admin do site):
+colocar arquivo no Models(dentro de cars)
+classe Car(que é o nome do a entidade no BD)herda da classe models.Model(disponível pelo django). Ou seja, class Car(models.Model) vai ser um Model, modelo. Após isso é preencher os campos (modelos de carro na tabela carros).
+
+id = models.AutoField(primary_key=True). O autofield ele auto incrementa.Não precisa colocar o Id do carro, preenche automático.
+
+model = model.models.CharField(max_length=200)
+Campo chamado model, ele é charfield, maximo de caracteres = 200
+
+brand = model.CharField(max_length=200). Mesma coisa de cima. Brand significa marca do carro.
+
+factory_year = models.IntegerField(). Ano de fabricação. IntergerField é que recebe um inteiro.
+
+value = models.FloatField(blank=True, null=True). Floatfield é o ponto flutuante.
+blank=True, null=True signigica que o campo pode ser deixado em branco que será preenchido com null.
+
+Depois de criar o campo no banco, usando o makemigration e o migrate. Para o banco aparecer no admin depois do runserver, é necessário ir no arquivo de cars chamado admin.py
+
+class CarAdmin(admin.ModelAdmin):
+    list_display = ('model','brand','factory_year','model_year','value')
+    search_fields = ('model',)
+A LÓGICA DA HERANÇA É A MESMA. A diferença é que list_display tem o padrão da classe, eu só subscrevo.
+O modelo search_fields é vazio, só que subscrevo o Model. O campo model de carro. Ex(fusca, chevette..) e isso significa que o admin vai poder fazer uma busca usando o modelo do carro. E o caradmin vai mostrar nas grades os respectivos atributos.
+
+admin.site.register(Car, CarAdmin) - Ele registra no site admin o modelo Car o CarAdmin são as configurações do CarAdmin
+---------------------------------------------------------------
+
+'     '    '    '    '    '     '     '
+** Para não ter que ficar escrevendo a marca ou qualquer coisa no campo marca, criamos uma class brand:
+class Brand(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=200)
+
+que será chamada por uma FK na tabela car:
+brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='brand'), onde Brand é a referencia da tabela; on_delete=models.PROTECT significa que se eu tiver 100 carros da fiat, irá apagar todas as dependencias. O protect nao deixa que isso aconteca. Se fosse cascade...aí apagaria as dependências. E o related_name só é o nome da relação entre car e brand.
+
+'     '    '    '    '    '     '     '
+---------------------------------------------------------------------
+
+''''''''''''''''''''''''''''''''''''''''''
+** Para fazer uso de imagens no django, foi usado na class car -- 
+photo = models.ImageField(upload_to='cars/', blank=True, null=True), onde vai criar uma pasta de foto cars/.
+Logo após vai em settings faz o import os, e adiciona os pacotes de media_root --
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/' ao final do arquivo
+Depois vai em url e adiciona em urlpatterns -> + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT) e faz o import -> 
+from django.conf import settings
+from django.conf.urls.static import static
+Agora o django está configurado para uso de imagens.
+''''''''''''''''''''''''''''''''''''''''''''
+------------------------------------------------------------------------
+
+**Parte do sistema para o usuário.
+A def com a request e response é feita na views do projeto, no caso, cars. É necessario o import --> from django.http import HttpResponse
+Na urls do app, cria o caminho da pagina, que no caso -> path('cars/', cars_view), e depois faz o import from cars.views import cars_view..que no caso é do arquivo views do projeto carro, import cars_view que é o caminho que foi criado na urls do app
+
+Agora na views.py nao vamos usar mais o hhtpresponse, vamos usar a RENDER.
+A função render entrega a view para o usuário com o conteúdo existente no template.
+
+ler djangotemplatelanguage..usada para mostrar o contexto(do BD) no arquivo html que será mostrado no template, mostrando assim o dado ao usuário.
+
+ORM - camada em cima do BD. Trata os registros de BD como objeto.
+
+brand__name='Chevrolet' -> o __ faz a navegação de uma tabela pra outra, acessa a ligação com a chave estrangeira com a tabela cars e essa mesma brand que ta ligando com cars tenha o name igual a chevrolet.
+
+cars = Car.objects.filter(model__icontains=search) -> o model__contains procura exatamente a chave que o usuário passa no search e o model__icontains ignora o sensitive case.
+
+{% csrf_token %} -> é uma proteção do django para alguns tipos de ataques.
+
+**Criando o formulário: Foi criando um arquivo forms.py nas pasta cars. Nele foi feito o import forms.
+Depois foi criada a class CarForm(form.Form) -> ou seja, cria a classe do formulário Car e herda de form.Form (que já é uma série de recursos para formulários).
+
+No forms, para fazer a herança da brand, usamos o brand = forms.ModelChoiceField(Brand.objects.all()) -> o Brand.objects.all lista todas as marcas cadastradas do banco de dados. E o ModelChoiceField é um tipo de campo que o django trás.
+
+No new_car.html -> {{ new_car_form.as_p }} -> renderize new_car_form como parágrafo(as_p).
+ou 
+pode colocar <table> {{ new_car_form.as_table }} </table> que fica alinhado.
+
+new_car_form = CarForms(request.POST, request.FILES) -> request.POST terá todos os dados dos post quando o usuário preencher os campos e enviar.
+
+Na revenda nao aceita valor de carro abaixo de 20 mil reais -> Para criar validações no django -> sempre criar usando a sintaxe values. ->
+-> def clean_alguma coisa; no caso é clean_value(porque é o valor), mas se fosse o modelo podia ser clean_model.
+
+def clean_value(self):
+        value = self.cleaned_data.get('value') -> da instância do form(self), pega do meu formulário os dados limpos(cleaned_data.get -> funcao nativa de form) do campo value que o usuário inseriu.
+
+if value < 20000:
+            self.add_error('value','Valor mínimo do carro deve ser de R$20.000')
+        return value
+
+-> Se o valor for menos que vinte mil, vai adicionar um erro no formulário (self) com o aviso no (campo value'), e a (mensagem'Valor mínimo do carro deve ser de R$20.000')
+----------------------------------------------------------------------------------
+TELA DE LOGIN:
+
+Criação de contas de usuários na página:
+criou com: python .\manage.py startapp accounts
+depois vai em setting e coloca 'accounts' em installed_app
+depois temos que criar uma rota nova(tela nova onde faz o username e senha) -> vai em url e cria nova rota -> path('register/', register_view, name= 'register')
+depois vai na views de accounts -> importa o modelo que tem no bancos de dados do django-> from django.contrib.auth.forms import UserCreationForm e 
+após isso cria a view -> 
+def register_views(request):
+    user_form = UserCreationForm()
+    return render(request, 'register.html',{'user_form':user_form})
+
+-----------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
